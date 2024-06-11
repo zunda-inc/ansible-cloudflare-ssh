@@ -1,0 +1,92 @@
+- name: add cloudflare repository gpg key
+  get_url:
+    url: https://pkg.cloudflare.com/cloudflare-main.gpg
+    dest: /etc/apt/keyrings/cloudflare-pubkey.gpg
+    mode: '0644'
+    
+- name: install cloudflared repository
+  apt_repository:
+    repo: 'deb [signed-by=/etc/apt/keyrings/cloudflare-pubkey.gpg] https://pkg.cloudflare.com/cloudflared jammy main'
+    state: present
+    update_cache: yes
+
+- name: install cloudflared
+  apt:
+    name: cloudflared
+    state: present
+    update_cache: yes
+    policy_rc_d: 101
+  ignore_errors: '{{ ansible_check_mode }}'
+
+# ドットを含むユーザー,グループを作成できるようにする
+- name: edit adduser.conf
+  lineinfile:
+    path: /etc/adduser.conf
+    state: present
+    regexp: '^#NAME_REGEX.*$'
+    line: 'NAME_REGEX="^[a-z][-a-z0-9_.]*\$?$"'
+
+# ログインシェルをbashにする
+- name: edit useradd config
+  lineinfile:
+    path: /etc/default/useradd
+    state: present
+    regexp: '^SHELL=\/bin\/sh$'
+    line: 'SHELL=/bin/bash'
+
+# ログイン用のユーザーを作成
+- name: Add the groups
+  group:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ users }}"
+
+- name: Add the users
+  user:
+    name: "{{ item }}"
+    group: "{{ item}}"
+    groups: 
+      - sudo
+    state : present
+  loop: "{{ users }}"
+
+# cloudflareの公開鍵をコピー
+- name: Add cloudflare pubkey
+  copy:
+    content: '{{ cloudflare_ca_key }}' 
+    dest: /etc/ssh/ca.pub
+    mode: 0644
+
+# sudoersでのパスワード認証を無効化
+- name: Enable passwordless sudo
+  lineinfile:
+    path: /etc/sudoers
+    state: present
+    regexp: '^%sudo'
+    line: '%sudo ALL=(ALL:ALL) NOPASSWD: ALL'
+    validate: 'visudo -cf %s'
+
+# sshd_configを編集
+- name: enable ssh TrustedUserCAKeys
+  copy:
+    content: |
+      # cloudflared config
+      PubkeyAuthentication yes
+      TrustedUserCAKeys /etc/ssh/ca.pub
+    dest: /etc/ssh/sshd_config.d/01-cloudflared-ssh.conf
+    mode: 600
+  notify: restart ssh
+
+# cloudflare プロセスをインストール
+- name: install cloudflared modified systemd service file
+  template:
+    src: cloudflared.service.j2
+    dest: /etc/systemd/system/cloudflared.service
+    mode: 644
+  notify: restart cloudflared
+
+- name: enable cloudflared
+  systemd:
+    name: cloudflared
+    enabled: yes
+  ignore_errors: '{{ ansible_check_mode }}'

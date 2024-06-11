@@ -1,0 +1,11 @@
+- name: restart cloudflared
+  systemd:
+    name: cloudflared-ssh
+    daemon_reload: true
+    state: restarted
+  ignore_errors: '{{ ansible_check_mode }}'
+# ssh再起動
+- name: restart ssh
+  service:
+    name: ssh
+    state: restarted
