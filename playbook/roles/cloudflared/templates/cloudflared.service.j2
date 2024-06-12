@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 TimeoutStartSec=0
 Type=notify
-ExecStart=/usr/bin/cloudflared --protocol http2 --no-autoupdate tunnel run --token {{ cloudflared_ssh_token }}
+ExecStart=/usr/bin/cloudflared --protocol http2 --no-autoupdate tunnel run --token {{ cloudflared_token }}
 Restart=on-failure
 RestartSec=5s
 
