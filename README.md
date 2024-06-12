@@ -6,7 +6,7 @@ This is a sample playbook for configuring Cloudflare Browser SSH using Ansible.
 
 ## Usage
 ### Install python
-Install pyenv according to your environment.
+Install pyenv according to your environment.  
 https://github.com/pyenv/pyenv?tab=readme-ov-file#installation
 
 In Ubuntu 22.04 case,
