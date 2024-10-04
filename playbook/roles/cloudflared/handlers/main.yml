@@ -1,6 +1,6 @@
 - name: restart cloudflared
   systemd:
-    name: cloudflared-ssh
+    name: cloudflared
     daemon_reload: true
     state: restarted
   ignore_errors: '{{ ansible_check_mode }}'
